@@ -27,28 +27,32 @@
 ## ✨ Fonctionnalités
 
 ### 🎯 Smart Dispatcher (Contrôle de Concurrence)
+
 Le cœur du système. Lorsqu'un colis est prêt, il est automatiquement attribué au livreur disponible le plus proche.
 
 **Problème résolu** : Si 50 requêtes tentent d'assigner un colis au même livreur (qui n'a qu'une place), **une seule réussit**, les 49 autres reçoivent une erreur 409 (Conflict).
 
 **Solution technique** :
+
 - 🔒 **Verrou distribué Redis** (Redlock) - Empêche les race conditions entre instances
 - 🔒 **Transaction PostgreSQL SERIALIZABLE** - Garantit l'intégrité au niveau base de données
 - 🔒 **SELECT FOR UPDATE** - Verrouille la ligne du livreur pendant la transaction
 
 ### 📍 Cache des Zones Géographiques
+
 Les zones de Casablanca (Anfa, Maarif, Gauthier, etc.) sont stockées dans Redis pour éviter des requêtes répétitives à PostgreSQL.
 
 - TTL de 1 heure
 - Invalidation automatique lors des modifications (hooks Sequelize)
 
 ### ⚡ Jobs Asynchrones (Background Workers)
+
 Chaque dispatch déclenche des processus lourds qui s'exécutent en arrière-plan :
 
-| Job | Durée | Description |
-|-----|-------|-------------|
-| Calcul d'itinéraire | ~2s | Simulation d'un appel API de routing (Google Maps, OSRM) |
-| Génération de reçu | Immédiat | Création d'un reçu numérique + notification console |
+| Job                 | Durée    | Description                                              |
+| ------------------- | -------- | -------------------------------------------------------- |
+| Calcul d'itinéraire | ~2s      | Simulation d'un appel API de routing (Google Maps, OSRM) |
+| Génération de reçu  | Immédiat | Création d'un reçu numérique + notification console      |
 
 Ces jobs sont gérés par **BullMQ** (basé sur Redis) et traités par un processus Worker séparé.
 
@@ -95,25 +99,26 @@ Ces jobs sont gérés par **BullMQ** (basé sur Redis) et traités par un proces
 
 ## 🛠 Stack Technique
 
-| Composant | Technologie |
-|-----------|-------------|
-| Runtime | Node.js 20+ |
-| Langage | TypeScript 5.x |
-| Framework Web | Express.js |
-| Base de données | PostgreSQL 15 |
-| ORM | Sequelize 6 |
-| Cache & Broker | Redis 7 |
-| Queue de jobs | BullMQ |
-| Verrous distribués | Redlock |
-| Conteneurisation | Docker & Docker Compose |
-| Tests | Jest + Supertest |
-| CI/CD | GitHub Actions |
+| Composant          | Technologie             |
+| ------------------ | ----------------------- |
+| Runtime            | Node.js 20+             |
+| Langage            | TypeScript 5.x          |
+| Framework Web      | Express.js              |
+| Base de données    | PostgreSQL 15           |
+| ORM                | Sequelize 6             |
+| Cache & Broker     | Redis 7                 |
+| Queue de jobs      | BullMQ                  |
+| Verrous distribués | Redlock                 |
+| Conteneurisation   | Docker & Docker Compose |
+| Tests              | Jest + Supertest        |
+| CI/CD              | GitHub Actions          |
 
 ---
 
 ## 🚀 Installation
 
 ### Prérequis
+
 - Docker & Docker Compose
 - Node.js 20+ (pour le développement local)
 - pnpm (recommandé) ou npm
@@ -122,7 +127,7 @@ Ces jobs sont gérés par **BullMQ** (basé sur Redis) et traités par un proces
 
 ```bash
 # Cloner le projet
-git clone <repo-url>
+git clone https://github.com/harbouli/logistic.git
 cd logistic
 
 # Démarrer toute l'infrastructure
@@ -154,18 +159,6 @@ pnpm run dev:worker
 
 ## 📖 Utilisation
 
-### Test rapide avec le script
-
-```bash
-./test-manual.sh
-```
-
-Ce script va :
-1. Créer une zone "Maarif"
-2. Créer un livreur "Hassan"
-3. Créer un colis
-4. Dispatcher le colis au livreur
-
 ### Exemple de requêtes manuelles
 
 ```bash
@@ -195,43 +188,48 @@ curl -X POST http://localhost:3000/api/parcels/<PARCEL_ID>/dispatch \
 ## 📡 API Endpoints
 
 ### Health Check
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/health` | Vérifie que l'API est en ligne |
+
+| Méthode | Endpoint      | Description                    |
+| ------- | ------------- | ------------------------------ |
+| GET     | `/api/health` | Vérifie que l'API est en ligne |
 
 ### Zones
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/zones` | Liste toutes les zones (depuis cache) |
-| GET | `/api/zones/:id` | Récupère une zone par ID |
-| POST | `/api/zones` | Crée une nouvelle zone |
-| PUT | `/api/zones/:id` | Met à jour une zone |
-| DELETE | `/api/zones/:id` | Supprime une zone |
+
+| Méthode | Endpoint         | Description                           |
+| ------- | ---------------- | ------------------------------------- |
+| GET     | `/api/zones`     | Liste toutes les zones (depuis cache) |
+| GET     | `/api/zones/:id` | Récupère une zone par ID              |
+| POST    | `/api/zones`     | Crée une nouvelle zone                |
+| PUT     | `/api/zones/:id` | Met à jour une zone                   |
+| DELETE  | `/api/zones/:id` | Supprime une zone                     |
 
 ### Livreurs (Drivers)
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/drivers` | Liste tous les livreurs |
-| GET | `/api/drivers/:id` | Récupère un livreur par ID |
-| POST | `/api/drivers` | Crée un nouveau livreur |
-| PATCH | `/api/drivers/:id` | Met à jour un livreur |
-| DELETE | `/api/drivers/:id` | Supprime un livreur |
+
+| Méthode | Endpoint           | Description                |
+| ------- | ------------------ | -------------------------- |
+| GET     | `/api/drivers`     | Liste tous les livreurs    |
+| GET     | `/api/drivers/:id` | Récupère un livreur par ID |
+| POST    | `/api/drivers`     | Crée un nouveau livreur    |
+| PATCH   | `/api/drivers/:id` | Met à jour un livreur      |
+| DELETE  | `/api/drivers/:id` | Supprime un livreur        |
 
 ### Colis (Parcels)
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/parcels` | Liste tous les colis |
-| GET | `/api/parcels/:id` | Récupère un colis par ID |
-| POST | `/api/parcels` | Crée un nouveau colis |
-| PATCH | `/api/parcels/:id` | Met à jour un colis |
+
+| Méthode  | Endpoint                        | Description               |
+| -------- | ------------------------------- | ------------------------- |
+| GET      | `/api/parcels`                  | Liste tous les colis      |
+| GET      | `/api/parcels/:id`              | Récupère un colis par ID  |
+| POST     | `/api/parcels`                  | Crée un nouveau colis     |
+| PATCH    | `/api/parcels/:id`              | Met à jour un colis       |
 | **POST** | **`/api/parcels/:id/dispatch`** | **⚡ Dispatche le colis** |
 
 ### Livraisons (Deliveries)
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/deliveries` | Liste toutes les livraisons |
-| GET | `/api/deliveries/:id` | Récupère une livraison par ID |
-| PATCH | `/api/deliveries/:id` | Met à jour le statut |
+
+| Méthode | Endpoint              | Description                   |
+| ------- | --------------------- | ----------------------------- |
+| GET     | `/api/deliveries`     | Liste toutes les livraisons   |
+| GET     | `/api/deliveries/:id` | Récupère une livraison par ID |
+| PATCH   | `/api/deliveries/:id` | Met à jour le statut          |
 
 ---
 
@@ -323,10 +321,10 @@ DB_PORT=5433 pnpm run test:stress
 
 ```
 📊 STRESS TEST RESULTS:
-   ✅ Successes (201): 1     
-   ⚠️  Conflicts (409): 49  
-   ❓ Not Found (404): 0     
-   ❌ Errors (500): 0        
+   ✅ Successes (201): 1
+   ⚠️  Conflicts (409): 49
+   ❓ Not Found (404): 0
+   ❌ Errors (500): 0
 
 ✅ STRESS TEST PASSED: Only 1 parcel was dispatched!
 ```
@@ -399,12 +397,12 @@ logistic/
 
 ## 🐳 Services Docker
 
-| Service | Image | Port | Description |
-|---------|-------|------|-------------|
-| `api` | Build local | 3000 | API Express |
-| `worker` | Build local | - | BullMQ Worker |
-| `postgres` | postgres:15-alpine | 5433 | Base de données |
-| `redis` | redis:7-alpine | 6379 | Cache + Queues + Locks |
+| Service    | Image              | Port | Description            |
+| ---------- | ------------------ | ---- | ---------------------- |
+| `api`      | Build local        | 3000 | API Express            |
+| `worker`   | Build local        | -    | BullMQ Worker          |
+| `postgres` | postgres:15-alpine | 5433 | Base de données        |
+| `redis`    | redis:7-alpine     | 6379 | Cache + Queues + Locks |
 
 ---
 
