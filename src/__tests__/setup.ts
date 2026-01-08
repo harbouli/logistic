@@ -1,6 +1,7 @@
 import { Sequelize } from 'sequelize';
 
-// Create a test database connection
+// Create a test database connection instance using Sequelize
+// This configuration uses environment variables or defaults to local postgres settings
 const testSequelize = new Sequelize({
     dialect: 'postgres',
     host: process.env.DB_HOST || 'localhost',
@@ -8,12 +9,13 @@ const testSequelize = new Sequelize({
     database: process.env.DB_NAME || 'logistima_test',
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
-    logging: false,
+    logging: false, // Disable SQL query logging during tests for cleaner output
 });
 
-// Global setup before all tests
+// Global setup hook: Runs once before all tests in the suite
 beforeAll(async () => {
     try {
+        // Verify database connection is working
         await testSequelize.authenticate();
         console.log('✅ Test database connected');
     } catch (error) {
@@ -21,9 +23,10 @@ beforeAll(async () => {
     }
 });
 
-// Global teardown after all tests
+// Global teardown hook: Runs once after all tests in the suite have finished
 afterAll(async () => {
     try {
+        // Close the database connection to prevent open handles
         await testSequelize.close();
         console.log('✅ Test database connection closed');
     } catch (error) {
@@ -31,4 +34,5 @@ afterAll(async () => {
     }
 });
 
+// Export the sequelize instance for use in tests if needed
 export { testSequelize };

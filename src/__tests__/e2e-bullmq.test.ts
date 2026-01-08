@@ -14,6 +14,8 @@ import { Worker } from 'bullmq';
  * 
  * Tests the complete dispatch → queue → worker pipeline with 50 simultaneous dispatches.
  */
+// End-to-End Stress Test for BullMQ Queue Processing
+// This suite validates the entire pipeline from dispatch API to background job processing
 describe('E2E Stress Test - BullMQ Queue Processing', () => {
     let zone: Zone;
     let drivers: Driver[];
@@ -40,19 +42,20 @@ describe('E2E Stress Test - BullMQ Queue Processing', () => {
         console.log('✅ E2E Test setup complete');
     });
 
+    // Reset environment before each test
     beforeEach(async () => {
-        // Clean up previous test data
+        // Clean up database tables
         await Delivery.destroy({ where: {} });
         await Parcel.destroy({ where: {} });
         await Driver.destroy({ where: {} });
 
-        // Flush Redis locks
+        // Remove any lingering Redis locks
         const keys = await redis.keys('lock:*');
         if (keys.length > 0) {
             await redis.del(...keys);
         }
 
-        // Obliterate the queues to start fresh (removes ALL jobs)
+        // COMPLETELY clear the queues (remove all jobs) to ensure accurate counts
         await routeQueue.obliterate({ force: true });
         await receiptQueue.obliterate({ force: true });
 
@@ -104,7 +107,11 @@ describe('E2E Stress Test - BullMQ Queue Processing', () => {
     });
 
     /**
-     * Utility function to wait for queue jobs to complete
+     * Helper: Polls a specific queue until the expected number of jobs are processed.
+     * Useful for async integration testing where we need to wait for workers to finish.
+     * @param queue The BullMQ queue instance to check
+     * @param expectedCount The minimum number of processed jobs (completed + failed) to wait for
+     * @param timeoutMs Max wait time in ms
      */
     async function waitForQueueCompletion(
         queue: typeof routeQueue,
@@ -128,6 +135,8 @@ describe('E2E Stress Test - BullMQ Queue Processing', () => {
         return { completed: finalCounts.completed, failed: finalCounts.failed };
     }
 
+    // Test Scenario: High concurrency dispatch
+    // Simulates a burst of traffic to test system stability and locking mechanisms
     it('should dispatch 50 parcels SIMULTANEOUSLY and verify BullMQ processing', async () => {
         console.log('\n🔥 SIMULTANEOUS DISPATCH TEST: Sending 50 requests at once...\n');
 
@@ -183,6 +192,8 @@ describe('E2E Stress Test - BullMQ Queue Processing', () => {
         console.log('='.repeat(50) + '\n');
     }, 120000);
 
+    // Test Scenario: Sequential reliable processing
+    // Verifies that under normal load, all jobs are processed correctly and queues are drained
     it('should dispatch 50 parcels SEQUENTIALLY and verify all BullMQ jobs process', async () => {
         console.log('\n🔥 SEQUENTIAL DISPATCH TEST: Sending 50 requests one-by-one...\n');
 

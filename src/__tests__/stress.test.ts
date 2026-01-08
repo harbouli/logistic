@@ -17,11 +17,12 @@ describe('Stress Test - 50 Concurrent Requests', () => {
     let driver: Driver;
     let parcels: Parcel[];
 
+    // Run once before all tests in this suite
     beforeAll(async () => {
-        // Initialize database
+        // Initialize database with force:true to recreate tables
         await sequelize.sync({ force: true });
 
-        // Create test zone
+        // Create test zone (Sidi Maarif) for the stress test
         zone = await Zone.create({
             name: 'Sidi Maarif',
             centerLat: 33.5600,
@@ -32,13 +33,14 @@ describe('Stress Test - 50 Concurrent Requests', () => {
         console.log('Stress test zone created:', zone.id);
     });
 
+    // Run before each test case to reset the environment
     beforeEach(async () => {
-        // Clean up
+        // Clean up all related tables to start fresh
         await Delivery.destroy({ where: {} });
         await Parcel.destroy({ where: {} });
         await Driver.destroy({ where: {} });
 
-        // Flush Redis locks
+        // Flush Redis locks to prevent interference from previous runs
         const keys = await redis.keys('lock:*');
         if (keys.length > 0) {
             await redis.del(...keys);
@@ -54,7 +56,7 @@ describe('Stress Test - 50 Concurrent Requests', () => {
             zoneId: zone.id,
         });
 
-        // Create 50 parcels
+        // Create 50 unique parcels to be used in the concurrent requests
         parcels = await Promise.all(
             Array(50)
                 .fill(null)
@@ -83,7 +85,8 @@ describe('Stress Test - 50 Concurrent Requests', () => {
     it('should allow only ONE dispatch when driver has capacity=1 (50 concurrent requests)', async () => {
         console.log('\n🔥 STRESS TEST: Sending 50 concurrent dispatch requests...\n');
 
-        // Send 50 concurrent requests
+        // Send 50 concurrent dispatch requests for the created parcels
+        // We catch errors individually to ensure Promise.all doesn't fail on the first error
         const results = await Promise.all(
             parcels.map((parcel) =>
                 request(app)

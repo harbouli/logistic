@@ -3,14 +3,18 @@ import { zoneCacheService } from '../services';
 import sequelize from '../config/database';
 import { Zone } from '../models';
 
+// Test suite for the Zone Cache Service
+// Verifies caching behavior for zone data to reduce database load
 describe('Zone Cache Service', () => {
     beforeAll(async () => {
         await sequelize.sync({ force: true });
     });
 
+    // Reset cache and database state before each test
     beforeEach(async () => {
-        // Clear cache and zones
+        // Clear global zone cache
         await redis.del('zones:all');
+        // Remove all zones from DB
         await Zone.destroy({ where: {} });
     });
 
@@ -20,8 +24,9 @@ describe('Zone Cache Service', () => {
     });
 
     describe('getZones', () => {
+        // Test case: Verifies that data is fetched from DB when cache is empty and then cached
         it('should fetch zones from database on cache miss', async () => {
-            // Create zones
+            // Setup: Create zones in the database
             await Zone.create({
                 name: 'Anfa',
                 centerLat: 33.5731,
@@ -48,8 +53,9 @@ describe('Zone Cache Service', () => {
             expect(JSON.parse(cached!)).toHaveLength(2);
         });
 
-        it('should return zones from cache on subsequent calls', async () => {
-            // Pre-populate cache
+        // Test case: Verifies that data is fetched from Redis cache when available, bypassing DB
+        it('should return zones fromcache on subsequent calls', async () => {
+            // Setup: Manually seed the cache with mock data
             const mockZones = [
                 { id: 'test-1', name: 'Cached Zone', centerLat: 33.5, centerLng: -7.5, radius: 3 },
             ];

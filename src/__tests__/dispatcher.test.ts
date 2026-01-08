@@ -4,6 +4,7 @@ import sequelize from '../config/database';
 import { redis } from '../config/redis';
 import { Zone, Driver, Parcel, Delivery } from '../models';
 
+// Describe block for testing the Smart Dispatcher functionality
 describe('Smart Dispatcher', () => {
     let zone: Zone;
     let driver: Driver;
@@ -23,13 +24,14 @@ describe('Smart Dispatcher', () => {
         console.log('Test zone created:', zone.id);
     });
 
+    // Run before each test case to ensure a clean state
     beforeEach(async () => {
-        // Clean up deliveries, parcels, and reset drivers
+        // Clean up deliveries, parcels, and reset drivers to avoid data pollution between tests
         await Delivery.destroy({ where: {} });
         await Parcel.destroy({ where: {} });
         await Driver.destroy({ where: {} });
 
-        // Flush Redis locks
+        // Flush Redis locks to ensure no locks persist from previous failed tests
         const keys = await redis.keys('lock:*');
         if (keys.length > 0) {
             await redis.del(...keys);
@@ -42,8 +44,9 @@ describe('Smart Dispatcher', () => {
     });
 
     describe('POST /api/parcels/:id/dispatch', () => {
+        // Test case: Verifies beneficial dispatch flow (happy path)
         it('should successfully dispatch a parcel to an available driver', async () => {
-            // Create driver with capacity
+            // Setup: Create a driver with available capacity in the target zone
             driver = await Driver.create({
                 name: 'Mohamed',
                 phone: '+212600000001',
@@ -79,6 +82,7 @@ describe('Smart Dispatcher', () => {
             expect(driver.capacity).toBe(4);
         });
 
+        // Test case: Verifies error handling for non-existent parcel IDs
         it('should return 404 for non-existent parcel', async () => {
             const response = await request(app)
                 .post('/api/parcels/00000000-0000-0000-0000-000000000000/dispatch')
@@ -88,6 +92,7 @@ describe('Smart Dispatcher', () => {
             expect(response.body.success).toBe(false);
         });
 
+        // Test case: Verifies error handling when no drivers have capacity
         it('should return 409 when driver has no capacity', async () => {
             // Create driver with NO capacity
             driver = await Driver.create({
@@ -120,6 +125,7 @@ describe('Smart Dispatcher', () => {
             expect(response.body.success).toBe(false);
         });
 
+        // Test case: Verifies error handling for parcels that are already assigned
         it('should return 409 for already assigned parcel', async () => {
             driver = await Driver.create({
                 name: 'Youssef',
